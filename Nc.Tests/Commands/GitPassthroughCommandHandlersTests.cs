@@ -32,12 +32,12 @@ public sealed class GitPassthroughCommandHandlersTests : IDisposable
     }
 
     [Fact]
-    public void Status_WithCleanRepo_PrintsNothing()
+    public void Status_WithCleanRepo_PrintsCleanWorkspaceMessage()
     {
         var output = CaptureConsoleOut(() => GitPassthroughCommandHandlers.Status(_repoPath));
 
         Assert.Equal(0, output.ExitCode);
-        Assert.Equal(string.Empty, output.Text);
+        Assert.Equal("Rien à synchroniser, l'espace de travail est propre." + Environment.NewLine, output.Text);
     }
 
     [Fact]

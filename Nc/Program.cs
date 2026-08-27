@@ -68,6 +68,17 @@ internal static class Program
         addCommand.SetAction((parseResult, _) =>
             Task.FromResult(GitPassthroughCommandHandlers.Add(Environment.CurrentDirectory, parseResult.GetValue(specArgument)!)));
 
+        var resetSpecArgument = new Argument<string[]>("spec")
+        {
+            Description = "Fichier(s) à réinitialiser à partir de la dernière synchronisation connue"
+        };
+        var resetCommand = new Command("reset", "Réinitialise des fichiers à partir du dernier état synchronisé (équivalent local de `git checkout -- <spec>`)")
+        {
+            resetSpecArgument
+        };
+        resetCommand.SetAction((parseResult, _) =>
+            Task.FromResult(ResetCommandHandler.Execute(Environment.CurrentDirectory, parseResult.GetValue(resetSpecArgument)!)));
+
         var pushCommand = new Command("push", "Envoie vers le serveur d'origine les modifications marquées par 'nc add'");
         pushCommand.SetAction((_, _) => NotImplementedAsync("push"));
 
@@ -87,6 +98,7 @@ internal static class Program
             configCommand,
             cloneCommand,
             addCommand,
+            resetCommand,
             pushCommand,
             pullCommand,
             diffCommand,

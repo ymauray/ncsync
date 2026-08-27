@@ -12,8 +12,24 @@ internal static class GitPassthroughCommandHandlers
     public static int Add(string workingDirectory, string[] specs) =>
         Run(new GitClient(workingDirectory).Add(specs));
 
-    public static int Status(string workingDirectory) =>
-        Run(new GitClient(workingDirectory).Status());
+    public static int Status(string workingDirectory)
+    {
+        var result = new GitClient(workingDirectory).Status();
+        if (!result.Success)
+        {
+            Console.Error.WriteLine(result.StandardError);
+            return 1;
+        }
+
+        if (result.StandardOutput.Length == 0)
+        {
+            Console.WriteLine("Rien à synchroniser, l'espace de travail est propre.");
+            return 0;
+        }
+
+        Console.Write(result.StandardOutput);
+        return 0;
+    }
 
     public static int Diff(string workingDirectory) =>
         Run(new GitClient(workingDirectory).DiffCached());

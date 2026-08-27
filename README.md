@@ -29,7 +29,7 @@ nc add <spec>
 nc push
 ```
 
-Commandes prévues : `config`, `clone`, `add`, `push`, `pull`, `diff`, `status`. Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) pour le détail et les contraintes (un seul serveur distant par dossier, pas de fusion automatique).
+Commandes prévues : `config`, `clone`, `add`, `reset`, `push`, `pull`, `diff`, `status`. Voir [`CAHIER_DES_CHARGES.md`](CAHIER_DES_CHARGES.md) pour le détail et les contraintes (un seul serveur distant par dossier, pas de fusion automatique).
 
 ## Prérequis (une fois l'outil implémenté)
 
