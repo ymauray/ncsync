@@ -36,6 +36,10 @@ Commandes prévues : `config`, `clone`, `add`, `reset`, `push`, `pull`, `diff`, 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - `git` disponible dans le `PATH`
 
+## Développement
+
+Ce logiciel est développé par un agent IA (Claude Code, Anthropic), piloté par [Yannick Mauray](https://github.com/ymauray) : chaque décision de conception, chaque étape de la [`ROADMAP.md`](ROADMAP.md) et chaque changement sont revus et validés par lui avant d'être intégrés.
+
 ## Contribuer
 
 Voir [`CONTRIBUTING.md`](CONTRIBUTING.md) et [`ROADMAP.md`](ROADMAP.md) pour savoir où reprendre le travail.
