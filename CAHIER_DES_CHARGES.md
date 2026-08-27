@@ -34,15 +34,15 @@ nc push
 
 | Commande | Rôle |
 |---|---|
-| `nc config username <nom>` | Enregistre l'identifiant de connexion au serveur Nextcloud |
-| `nc config password <mdp>` | Enregistre le mot de passe (ou app password) de connexion |
+| `nc config username [<nom>]` | Enregistre l'identifiant de connexion (réutilisable pour n'importe quel futur `nc clone`, pas seulement le dossier courant) ; sans argument, affiche le nom enregistré (rien si aucun) |
+| `nc config password [<mdp>]` | Enregistre le mot de passe (ou app password) de connexion (même réutilisation que le nom d'utilisateur) ; sans argument, ne fait rien et n'affiche jamais rien (même sa présence), pour ne jamais exposer d'information sur un secret |
 | `nc clone <serveur>:<chemin> <dest>` | Récupère l'intégralité d'un dossier distant Nextcloud dans un dossier local `<dest>`, et initialise le suivi des modifications |
 | `nc add <spec>` | Marque un ou plusieurs fichiers comme prêts à être synchronisés (ajout, modification ou suppression) |
 | `nc reset <spec>` | Réinitialise un ou plusieurs fichiers à partir de la dernière synchronisation connue, annulant toute modification locale (équivalent local de `git checkout -- <spec>`) ; un fichier jamais synchronisé est supprimé localement |
 | `nc push` | Envoie vers le serveur d'origine les modifications marquées par `nc add` |
 | `nc pull` | Récupère depuis le serveur d'origine les modifications apportées côté distant depuis la dernière synchronisation, et met à jour le dossier local |
 | `nc diff` | Affiche le détail des changements locaux non encore poussés (contenu, pas seulement la liste des fichiers) |
-| `nc status` | Affiche l'état local (fichiers modifiés/ajoutés/supprimés non encore poussés) |
+| `nc status` | Affiche l'état local (fichiers modifiés/ajoutés/supprimés non encore poussés), ou confirme explicitement qu'il n'y a rien à synchroniser si l'espace de travail est propre |
 
 Les commandes hors scope volontairement : `branch`, `tag`, `merge`, `rebase`, `remote add`, `fetch` multi-remote.
 
