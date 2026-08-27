@@ -35,7 +35,7 @@ Après une étape d'implémentation terminée, mettre à jour son statut dans `R
 
 ## 5. Confidentialité
 
-- **Ne jamais lire `.nc/config`** (dans ce dépôt ou dans tout dossier géré par `nc`) : ce fichier contient des informations sensibles. Ne pas l'ouvrir avec `Read`, `cat`, ou tout autre moyen, même à des fins de débogage ou de test — écrire un test qui vérifie son contenu sans jamais l'afficher ou le faire lire à l'IA (ex. assertions dans le code du test lui-même, pas d'inspection manuelle du fichier par l'agent).
+- **Ne jamais lire `.nc/config`** (dans ce dépôt ou dans tout dossier géré par `nc`) ni **`~/.config/ncsync/config`** (identité globale par défaut, voir `SPECS.md` §5) : ces fichiers contiennent des informations sensibles. Ne pas les ouvrir avec `Read`, `cat`, ou tout autre moyen, même à des fins de débogage ou de test — écrire un test qui vérifie leur contenu sans jamais l'afficher ou le faire lire à l'IA (ex. assertions dans le code du test lui-même, pas d'inspection manuelle du fichier par l'agent).
 
 ## 6. Standards Techniques
 

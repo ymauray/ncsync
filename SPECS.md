@@ -81,23 +81,32 @@ Le même mécanisme s'applique en sens inverse pour `nc pull` : avant d'écraser
 
 ## 5. Stockage des identifiants
 
-Cross-platform dès la v1 (cf. cahier des charges §6) : une abstraction `ICredentialStore` avec une implémentation par plateforme, sélectionnée au runtime via `RuntimeInformation.IsOSPlatform` :
+Cross-platform dès la v1 (cf. cahier des charges §6) : une abstraction `ICredentialStore` avec une implémentation par plateforme, sélectionnée au runtime via `OperatingSystem.IsWindows()`/`IsMacOS()`/`IsLinux()` (pas `RuntimeInformation.IsOSPlatform`, écarté — voir ROADMAP.md, journal des décisions, pour la raison liée à l'analyseur `CA1416`) :
 
 | Plateforme | Mécanisme |
 |---|---|
 | Windows | `System.Security.Cryptography.ProtectedData` (DPAPI), scope utilisateur courant |
-| macOS | Keychain, via appel `security` en ligne de commande (shell-out, cohérent avec l'approche adoptée pour Git) ou binding natif |
-| Linux | libsecret (Secret Service API, via `secret-tool` en shell-out) avec repli sur un fichier chiffré par une clé dérivée d'un secret local si aucun trousseau n'est disponible (ex. environnement headless/serveur) |
+| macOS | Keychain, via appel `security` en ligne de commande (shell-out, cohérent avec l'approche adoptée pour Git) |
+| Linux | libsecret (Secret Service API, via `secret-tool` en shell-out) avec repli sur un fichier chiffré (AES-256-GCM) par une clé locale si aucun trousseau n'est disponible (ex. environnement headless/serveur) — macOS n'a volontairement pas ce repli (`security` fait partie du système de base, son absence est anormale) |
 
-Fichier de config local hors du dépôt Git (`.nc/config`), jamais commité (cf. `.gitignore` généré). Seul le mot de passe/app-password est chiffré via `ICredentialStore` ; le reste (username, URL serveur) peut être stocké en clair dans `.nc/config`.
+### Deux niveaux de configuration : identité globale et config par dossier
+
+- **Identité par défaut (globale, multi-projets)** : `nc config username`/`nc config password` écrivent dans un emplacement global réutilisable depuis n'importe quel dossier — `~/.config/ncsync/config` pour le nom d'utilisateur (`IdentityConfigStore`), une clé de trousseau fixe `CredentialKey.Global` pour le mot de passe (`IdentityCredentialStore`, symétrique). Écriture : tente le global, replie sur `.nc/config`/une clé locale (par dossier) du dossier courant avec un message d'erreur si l'écriture globale échoue. Lecture : priorité au global, repli **silencieux** sur le local si absent. But : configurer une fois, réutiliser pour n'importe quel futur `nc clone`.
+- **Config par dossier (locale, propre à chaque clone)** : `.nc/config` (`NcConfigStore`) et une entrée `ICredentialStore` sous `CredentialKey.ForPath(dossier)` — écrits par `nc clone` dans le dossier de destination (copie de l'identité utilisée pour ce clone + `ServerUrl`/`RemotePath`, propres à ce dossier et non globalisables). C'est cette config locale que `push`/`pull`/`status`/etc. liront une fois un dossier cloné, puisqu'elle seule connaît le serveur/chemin distant de ce dossier précis.
+
+Fichiers hors du dépôt Git dans les deux cas (`.nc/` exclu via `.gitignore` généré au clone). Seul le mot de passe/app-password est chiffré via `ICredentialStore` ; le reste (username, URL serveur, chemin distant) est stocké en clair dans les fichiers `config` JSON correspondants — mais ces fichiers restent sensibles et ne doivent jamais être lus par un agent IA (voir `CLAUDE.md` §5).
 
 ## 6. Architecture logicielle (.NET 10)
 
-- **CLI** : `System.CommandLine` pour le parsing des sous-commandes (`config`, `clone`, `add`, `push`, `pull`, `diff`, `status`).
-- **Couche Git** : `GitClient` — wrapper autour de `Process` exécutant `git`, parsing de la sortie texte (`--porcelain` pour un format stable).
-- **Couche WebDAV** : `NextcloudWebDavClient` — wrapper `HttpClient`, requêtes XML (construction avec `XDocument`, parsing des réponses `PROPFIND` avec `XDocument`/LINQ to XML).
-- **Couche état local** : `SyncState` — lecture/écriture de `.nc/state.json` (dernier ref synchronisé, ETags connus par chemin).
-- **Couche credentials** : `ICredentialStore` / `DpapiCredentialStore`.
+- **CLI** (`Nc/Program.cs`) : `System.CommandLine`, actions asynchrones uniformément (`SetAction((parseResult, cancellationToken) => Task<int>)`, `Main` retourne `Task<int>` via `InvokeAsync()`). Sous-commandes : `config` (`username`, `password`), `clone`, `add`, `reset`, `push`, `pull`, `diff`, `status`.
+- **`Nc.Processes`** : `ProcessRunner`/`ProcessResult` — invocation générique d'un exécutable externe (git, security, secret-tool) avec capture stdout/stderr et distinction « exécutable introuvable » vs « commande en échec ». Base commune réutilisée par `Nc.Git` et `Nc.Credentials`.
+- **`Nc.Git`** : `GitClient` — wrapper `Process` autour de `git` (`Init`, `AddAll`, `Add`, `Status`, `DiffCachedNameStatus`, `DiffCached`, `Commit`, `UpdateRef`, `ReadRef`, `PathExistsInRef`, `CheckoutFromRef`, `Unstage`, `GetVersion`).
+- **`Nc.WebDav`** : `NextcloudWebDavClient` (`HttpClient` injectable pour les tests, factory `Create` pour l'usage réel), `WebDavPropFindParser` (parsing pur du XML `multistatus`), `WebDavHrefResolver` (résout un `href` absolu en chemin relatif au dossier demandé), `WebDavEntry`, `WebDavDepth`.
+- **`Nc.Sync`** : `NcCloneService` (algorithme de `nc clone`, pur — prend un `NextcloudWebDavClient` déjà construit), `SyncState`/`SyncStateStore` (`.nc/state.json`, ETags par chemin).
+- **`Nc.Storage`** : `JsonFileStore` — (dé)sérialisation JSON générique (`Load<T>`/`Save<T>`), réutilisée par `NcConfigStore` et `SyncStateStore`.
+- **`Nc.Configuration`** : `NcConfig` (schéma : `Username`, `ServerUrl`, `RemotePath`), `NcConfigStore` (`.nc/config`, local par dossier), `IdentityConfigStore` (identité globale `~/.config/ncsync/config` avec repli local, voir §5), `GlobalConfigLocation`.
+- **`Nc.Credentials`** : `ICredentialStore`, `DpapiCredentialStore`, `KeychainCredentialStore`, `SecretToolCredentialStore`, `EncryptedFileCredentialStore`, `CredentialStoreFactory` (sélection par plateforme), `CredentialKey` (dérivation de clé par dossier + clé globale fixe), `IdentityCredentialStore` (symétrique à `IdentityConfigStore` pour le mot de passe, voir §5).
+- **`Nc.Commands`** : un handler testable par commande (ou groupe de commandes passe-plat), câblé depuis `Program.cs` : `ConfigCommandHandlers`, `CloneCommandHandler` (+ `RemoteSpec`), `ResetCommandHandler`, `GitPassthroughCommandHandlers` (`add`/`status`/`diff`).
 
 ## 7. Gestion des erreurs
 
@@ -110,5 +119,5 @@ Fichier de config local hors du dépôt Git (`.nc/config`), jamais commité (cf.
 2. Fiabilité de la détection de conflit par ETag (cas limites : dossier renommé côté serveur, fichier supprimé côté serveur pendant qu'il est modifié en local).
 3. Détection de renommage côté Git (`-M` sur `git diff`) correctement mappée vers un `MOVE` WebDAV plutôt qu'un DELETE+PUT.
 4. Présence de `git` dans le `PATH` sur les trois OS cibles — vérification et message d'erreur au démarrage.
-5. Stockage des identifiants sur macOS/Linux : dépendance à des outils externes (`security`, `secret-tool`) potentiellement absents (ex. conteneur, serveur headless) — prévoir le repli fichier chiffré dès la v1, pas comme correctif ultérieur.
+5. ~~Stockage des identifiants sur macOS/Linux : dépendance à des outils externes (`security`, `secret-tool`) potentiellement absents~~ — traité en Phase 2 (`EncryptedFileCredentialStore`, repli Linux uniquement, voir §5 et ROADMAP.md).
 6. `nc pull` partiel : gérer proprement le cas où certains fichiers sont appliqués et d'autres bloqués par conflit dans le même appel, sans laisser l'état local (`refs/nc/synced`, `.nc/state.json`) incohérent.
