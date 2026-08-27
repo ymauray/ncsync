@@ -14,9 +14,9 @@ Légende des statuts : `⬜` non commencé · `🟨` en cours · `✅` terminé 
 
 ## 1. État global actuel
 
-**Aucune ligne de code écrite à ce stade.** Seuls les documents de cadrage existent (`CAHIER_DES_CHARGES.md`, `SPECS.md`, ce `ROADMAP.md`). Le dossier de travail n'est pas encore un dépôt Git.
+Dépôt Git initialisé et publié sur GitHub (`ymauray/ncsync`), scaffolding de gouvernance en place. **Phase 0 terminée** : solution .NET 10 bootstrappée, `nc --help` liste les 7 commandes (stubs non implémentés).
 
-Prochaine étape : **Phase 0 — Bootstrap de la solution .NET**.
+Prochaine étape : **Phase 1 — `GitClient`** (wrapper shell-out autour de `git`).
 
 ## 2. Décisions actées (ne pas rouvrir sans raison documentée)
 
@@ -29,12 +29,14 @@ Prochaine étape : **Phase 0 — Bootstrap de la solution .NET**.
 | Périmètre commandes | `config`, `clone`, `add`, `push`, `pull`, `diff`, `status` — pas de `branch`/`tag`/`merge`/`rebase`/multi-remote | CAHIER_DES_CHARGES.md §4 |
 | Credentials | Abstraction `ICredentialStore` : DPAPI (Windows) / Keychain via `security` (macOS) / `secret-tool` + repli fichier chiffré (Linux) | SPECS.md §5 |
 | CLI framework | `System.CommandLine` | SPECS.md §6 |
+| Nommage projets | Solution `ncsync.sln`, projet CLI `Nc/Nc.csproj` (namespace `Nc`, `AssemblyName=nc`), tests `Nc.Tests/Nc.Tests.csproj`, réf. via `InternalsVisibleTo` | Journal §5, entrée 2026-08-27 |
+| Version System.CommandLine | Épinglé en `2.0.11` (stable), pas la ligne preview `3.0.0-preview.*` qui s'installe par défaut avec `dotnet add package` | Journal §5, entrée 2026-08-27 |
 
 ## 3. Découpage en étapes
 
 | # | Étape | Statut | Prérequis | Livrable attendu |
 |---|---|---|---|---|
-| 0 | Bootstrap solution .NET 10 : structure de dossiers, `.sln`, projet CLI (`net10.0`), dépendance `System.CommandLine`, squelette `Program.cs` avec sous-commandes vides | ⬜ | — | Solution qui compile, `nc --help` liste les 7 commandes |
+| 0 | Bootstrap solution .NET 10 : structure de dossiers, `.sln`, projet CLI (`net10.0`), dépendance `System.CommandLine`, squelette `Program.cs` avec sous-commandes vides | ✅ | — | Solution qui compile, `nc --help` liste les 7 commandes |
 | 1 | `GitClient` : wrapper `Process` autour de `git`, méthodes `Init`, `AddAll`, `Add(spec)`, `Status`, `DiffCachedNameStatus`, `DiffCached`, `Commit`, `UpdateRef`, `ReadRef` ; vérification `git --version` au démarrage | ⬜ | 0 | Classe testable indépendamment de Nextcloud |
 | 2 | `ICredentialStore` + 3 implémentations (DPAPI / Keychain / libsecret+fallback) + sélection runtime via `RuntimeInformation` | ⬜ | 0 | Stockage/lecture chiffrés d'un secret, testé sur au moins Windows |
 | 3 | Commande `nc config username/password` : écrit `.nc/config` (username, URL en clair) + credential store pour le mot de passe | ⬜ | 2 | `nc config` fonctionnel de bout en bout |
@@ -64,11 +66,14 @@ Voir CAHIER_DES_CHARGES.md §7. Ne pas anticiper de code pour : résolution de c
 
 | Date | Décision | Raison |
 |---|---|---|
-| — | — | — |
+| 2026-08-27 | Un seul projet CLI (`Nc`) plutôt qu'une séparation CLI/Core dès le départ ; `GitClient`, `NextcloudWebDavClient`, `SyncState`, `ICredentialStore` vivront comme classes internes du même projet, exposées aux tests via `InternalsVisibleTo` | Pas de consommateur externe de la logique métier prévu — éviter une abstraction (séparation en assemblies) non justifiée par un besoin actuel |
+| 2026-08-27 | `System.CommandLine` épinglé à la version stable `2.0.11` | `dotnet add package` installe par défaut la ligne preview `3.0.0-preview.*`, à l'API différente et non stabilisée ; `2.0.11` est la dernière stable, alignée avec `ymauray/johannes` |
+| 2026-08-27 | Commandes non implémentées de la Phase 0 retournent un message explicite sur stderr + code de sortie 1 (fonction `NotImplemented`) plutôt que de planter ou de ne rien afficher | Rend l'état d'avancement visible directement en ligne de commande, cohérent avec le statut `ROADMAP.md` |
+| 2026-08-27 | Solution au format `ncsync.slnx` (nouveau format XML sans GUID), généré par défaut par `dotnet new sln` sous .NET 10 SDK — diffère du `.sln` classique de `ymauray/johannes` (généré sous un SDK antérieur) | Format par défaut de l'outillage .NET 10, plus lisible ; les deux formats sont interchangeables et pleinement supportés par le SDK |
 
 ## 6. Questions ouvertes (à trancher avant ou pendant l'étape concernée)
 
 - Format exact du nom de dossier temporaire pour le chunked upload (étape 15).
 - Stratégie précise si `secret-tool`/`security` sont absents au runtime sur Linux/macOS (étape 2) : message d'erreur bloquant ou repli silencieux sur fichier chiffré ?
 - Faut-il une commande `nc init-config` séparée ou est-ce que `nc config` suffit à créer `.nc/` avant tout `clone` ?
-- Nom exact du repo/solution et convention de nommage des projets (`Nc.Cli`, `Nc.Core`, etc.) — à fixer à l'étape 0.
+- `.github/dependabot.yml` ne surveille pour l'instant que la racine (`/`) en NuGet ; à réviser si des projets supplémentaires apparaissent (cf. pattern multi-répertoires utilisé par `ymauray/johannes`).

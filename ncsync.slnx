@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Nc.Tests/Nc.Tests.csproj" />
+  <Project Path="Nc/Nc.csproj" />
+</Solution>
