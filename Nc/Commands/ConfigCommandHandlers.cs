@@ -24,14 +24,14 @@ internal static class ConfigCommandHandlers
         return 0;
     }
 
-    public static int SetPassword(string workingDirectory, string? password)
+    public static int SetPassword(string workingDirectory, string? password, string? globalCredentialKey = null)
     {
         if (password is null)
         {
             return 0;
         }
 
-        CredentialStoreFactory.Create().Save(CredentialKey.ForPath(workingDirectory), password);
+        new IdentityCredentialStore(CredentialStoreFactory.Create(), workingDirectory, globalCredentialKey).Save(password);
         Console.WriteLine("Mot de passe enregistré.");
         return 0;
     }
