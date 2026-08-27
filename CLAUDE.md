@@ -16,6 +16,7 @@ Après une étape d'implémentation terminée, mettre à jour son statut dans `R
 
 ## 2. Gestion des Commits par l'IA
 
+- **Arrêt avant commit** : une fois une étape implémentée (build + tests locaux vérifiés), l'IA s'arrête *avant* de committer et laisse l'utilisateur tester/valider le résultat dans l'arbre de travail non commité.
 - **Invitation uniquement** : L'IA ne doit JAMAIS effectuer de commit de sa propre initiative. Elle doit attendre une instruction explicite (Directive) de l'utilisateur.
 - **Discrétion** : L'IA ne doit PAS demander à l'utilisateur s'il souhaite committer après chaque modification. C'est à l'utilisateur de décider du moment opportun pour consolider les changements.
 - **Co-auteur** : L'agent IA doit obligatoirement s'identifier dans les commits comme co-auteur (via la mention `Co-authored-by: <Nom> <email>` dans le message de commit).
@@ -23,7 +24,8 @@ Après une étape d'implémentation terminée, mettre à jour son statut dans `R
 ## 3. Gestion des Branches et Pull Requests
 
 - La branche `main` est protégée. Toute modification doit être développée sur une branche dédiée et intégrée via une pull request.
-- L'IA ne doit pousser une branche ou créer une pull request que sur instruction explicite de l'utilisateur.
+- **Un seul "go" pour toute la chaîne** : une fois l'utilisateur satisfait de sa validation, une instruction explicite (ex. "go") vaut invitation à enchaîner commit → branche → push → pull request → merge → nettoyage des branches, sans reconfirmation à chaque étape intermédiaire.
+- L'IA ne doit pousser une branche, créer, ni merger une pull request avant d'avoir reçu ce "go" explicite.
 
 ## 4. Cycle de Développement (Plan-Act-Validate)
 
