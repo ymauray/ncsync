@@ -65,7 +65,8 @@ internal static class Program
         {
             specArgument
         };
-        addCommand.SetAction((_, _) => NotImplementedAsync("add"));
+        addCommand.SetAction((parseResult, _) =>
+            Task.FromResult(GitPassthroughCommandHandlers.Add(Environment.CurrentDirectory, parseResult.GetValue(specArgument)!)));
 
         var pushCommand = new Command("push", "Envoie vers le serveur d'origine les modifications marquées par 'nc add'");
         pushCommand.SetAction((_, _) => NotImplementedAsync("push"));
@@ -74,10 +75,12 @@ internal static class Program
         pullCommand.SetAction((_, _) => NotImplementedAsync("pull"));
 
         var diffCommand = new Command("diff", "Affiche le détail des changements locaux non encore poussés");
-        diffCommand.SetAction((_, _) => NotImplementedAsync("diff"));
+        diffCommand.SetAction((_, _) =>
+            Task.FromResult(GitPassthroughCommandHandlers.Diff(Environment.CurrentDirectory)));
 
         var statusCommand = new Command("status", "Affiche l'état local (fichiers modifiés/ajoutés/supprimés non poussés)");
-        statusCommand.SetAction((_, _) => NotImplementedAsync("status"));
+        statusCommand.SetAction((_, _) =>
+            Task.FromResult(GitPassthroughCommandHandlers.Status(Environment.CurrentDirectory)));
 
         var rootCommand = new RootCommand("nc — client de synchronisation Nextcloud, workflow inspiré de Git")
         {
