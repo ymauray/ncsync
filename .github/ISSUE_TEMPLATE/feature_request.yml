@@ -1,0 +1,64 @@
+name: ✨ Demande de fonctionnalité
+description: Proposer une nouvelle fonctionnalité ou amélioration
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Veuillez décrire votre idée en détail ci-dessous.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Description du problème
+      description: Votre demande est-elle liée à un problème ? Veuillez décrire.
+      placeholder: Une description claire et concise du problème. Ex. Je suis toujours frustré quand [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Décrivez la solution que vous souhaiteriez
+      placeholder: Une description claire et concise de ce que vous souhaitez voir se produire.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
+      description: Décrivez les alternatives que vous avez envisagées
+      placeholder: Une description claire et concise de toute solution ou fonctionnalité alternative que vous avez envisagée.
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Cas d'usage
+      description: Décrivez votre cas d'usage précis
+      placeholder: Comment utiliseriez-vous cette fonctionnalité ? Quel flux de travail améliorerait-elle ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Contexte supplémentaire
+      description: Tout autre contexte relatif à la demande de fonctionnalité
+      placeholder: Ajoutez ici tout autre contexte, capture d'écran, maquette ou exemple relatif à la demande.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Liste de vérification
+      description: Veuillez confirmer les points suivants
+      options:
+        - label: J'ai recherché dans les issues existantes pour éviter les doublons
+          required: true
+        - label: J'ai vérifié que cette fonctionnalité correspond au périmètre du projet
+          required: true

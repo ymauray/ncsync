@@ -1,0 +1,13 @@
+# Handle line endings automatically for files detected as text
+# and leave binary files untouched.
+* text=auto
+
+# Source code files
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.sln text eol=crlf
+
+# Text/config files
+*.md text eol=lf
+*.yml text eol=lf
+*.gitignore text eol=lf

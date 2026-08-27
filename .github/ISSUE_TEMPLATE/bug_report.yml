@@ -1,0 +1,92 @@
+name: 🐛 Rapport de bug
+description: Signaler un bug ou un problème
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Veuillez remplir les informations ci-dessous pour nous aider à diagnostiquer et corriger le problème.
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+      description: Étapes permettant de reproduire le comportement
+      placeholder: |
+        1. Exécuter la commande : `...`
+        2. Faire autre chose : `...`
+        3. L'erreur se produit
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      description: Ce que vous attendiez qu'il se passe
+      placeholder: Décrivez le résultat attendu
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportement observé
+      description: Ce qui s'est réellement passé
+      placeholder: Décrivez ce qui s'est réellement produit
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Sortie d'erreur
+      description: Message d'erreur ou sortie complète (le cas échéant)
+      render: shell
+      placeholder: Collez ici le message d'erreur complet
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: La version ou le hash de commit du projet que vous utilisez
+      placeholder: ex. 1.0.0, dernière branche main, commit abc123def
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environnement
+      description: Tout détail d'environnement pertinent
+      placeholder: ex. système d'exploitation, version du runtime, navigateur, conteneur
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Contexte supplémentaire
+      description: Tout autre contexte relatif au problème
+      placeholder: Ajoutez toute autre information pertinente, capture d'écran ou contexte
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Liste de vérification
+      description: Veuillez confirmer les points suivants
+      options:
+        - label: J'ai recherché dans les issues existantes pour éviter les doublons
+          required: true
+        - label: J'ai fourni toutes les informations demandées ci-dessus
+          required: true
+        - label: Je peux reproduire ce problème de manière constante
+          required: false
