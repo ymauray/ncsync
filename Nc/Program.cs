@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Nc.Commands;
 
 namespace Nc;
 
@@ -6,25 +7,31 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        var usernameArgument = new Argument<string>("username")
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        var usernameArgument = new Argument<string?>("username")
         {
-            Description = "Nom d'utilisateur du compte Nextcloud"
+            Description = "Nom d'utilisateur du compte Nextcloud (omis : affiche le nom enregistré)",
+            Arity = ArgumentArity.ZeroOrOne
         };
-        var configUsernameCommand = new Command("username", "Enregistre le nom d'utilisateur Nextcloud")
+        var configUsernameCommand = new Command("username", "Enregistre ou affiche le nom d'utilisateur Nextcloud")
         {
             usernameArgument
         };
-        configUsernameCommand.SetAction(_ => NotImplemented("config username"));
+        configUsernameCommand.SetAction(parseResult =>
+            ConfigCommandHandlers.SetUsername(Environment.CurrentDirectory, parseResult.GetValue(usernameArgument)));
 
-        var passwordArgument = new Argument<string>("password")
+        var passwordArgument = new Argument<string?>("password")
         {
-            Description = "Mot de passe (ou app password) du compte Nextcloud"
+            Description = "Mot de passe (ou app password) du compte Nextcloud (omis : ne fait rien)",
+            Arity = ArgumentArity.ZeroOrOne
         };
         var configPasswordCommand = new Command("password", "Enregistre le mot de passe Nextcloud")
         {
             passwordArgument
         };
-        configPasswordCommand.SetAction(_ => NotImplemented("config password"));
+        configPasswordCommand.SetAction(parseResult =>
+            ConfigCommandHandlers.SetPassword(Environment.CurrentDirectory, parseResult.GetValue(passwordArgument)));
 
         var configCommand = new Command("config", "Configure les identifiants de connexion au serveur Nextcloud");
         configCommand.Subcommands.Add(configUsernameCommand);
