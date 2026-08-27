@@ -94,8 +94,25 @@ public sealed class ResetCommandHandlerTests : IDisposable
     }
 
     [Fact]
+    public void Execute_OnSubdirectoryFileGivenWithForwardSlash_RestoresContent()
+    {
+        Directory.CreateDirectory(Path.Combine(_repoPath, "sous-dossier"));
+        Sync(Path.Combine("sous-dossier", "a.txt"), "original");
+        File.WriteAllText(Path.Combine(_repoPath, "sous-dossier", "a.txt"), "modifié localement");
+
+        var exitCode = ResetCommandHandler.Execute(_repoPath, ["sous-dossier/a.txt"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("original", File.ReadAllText(Path.Combine(_repoPath, "sous-dossier", "a.txt")));
+    }
+
+    [SkippableFact]
     public void Execute_OnSubdirectoryFileGivenWithBackslash_RestoresRatherThanDeletes()
     {
+        // `\` n'est un separateur de chemin que sous Windows ; sous Linux/macOS c'est un
+        // caractere de nom de fichier ordinaire, donc ce test n'a de sens que sur Windows.
+        Skip.IfNot(OperatingSystem.IsWindows(), "L'antislash n'est un separateur de chemin que sous Windows.");
+
         // Regression : cette forme de chemin (style Windows) faisait passer un fichier
         // pourtant present dans refs/nc/synced par la branche "jamais synchronise", qui le
         // supprimait au lieu de restaurer son contenu (bug rapporte par l'utilisateur).

@@ -141,8 +141,24 @@ public sealed class GitClientTests : IDisposable
     }
 
     [Fact]
+    public void PathExistsInRef_ForFileInSubdirectoryGivenWithForwardSlash_Succeeds()
+    {
+        Directory.CreateDirectory(Path.Combine(_repoPath, "sous-dossier"));
+        File.WriteAllText(Path.Combine(_repoPath, "sous-dossier", "a.txt"), "contenu");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+
+        Assert.True(_git.PathExistsInRef("refs/nc/synced", "sous-dossier/a.txt"));
+    }
+
+    [SkippableFact]
     public void PathExistsInRef_ForFileInSubdirectoryGivenWithBackslash_Succeeds()
     {
+        // `\` n'est un separateur de chemin que sous Windows ; sous Linux/macOS c'est un
+        // caractere de nom de fichier ordinaire, donc ce test n'a de sens que sur Windows.
+        Skip.IfNot(OperatingSystem.IsWindows(), "L'antislash n'est un separateur de chemin que sous Windows.");
+
         Directory.CreateDirectory(Path.Combine(_repoPath, "sous-dossier"));
         File.WriteAllText(Path.Combine(_repoPath, "sous-dossier", "a.txt"), "contenu");
         _git.AddAll();
