@@ -7,7 +7,12 @@ namespace Nc.Commands;
 
 internal static class CloneCommandHandler
 {
-    public static async Task<int> ExecuteAsync(string currentDirectory, string remoteSpec, string destination, CancellationToken cancellationToken = default)
+    public static async Task<int> ExecuteAsync(
+        string currentDirectory,
+        string remoteSpec,
+        string destination,
+        CancellationToken cancellationToken = default,
+        string? globalConfigDirectory = null)
     {
         RemoteSpec remote;
         try
@@ -31,7 +36,7 @@ internal static class CloneCommandHandler
             return 1;
         }
 
-        var config = new NcConfigStore(currentDirectory).Load();
+        var config = new IdentityConfigStore(currentDirectory, globalConfigDirectory).Load();
         if (config.Username is null)
         {
             Console.Error.WriteLine("Aucun nom d'utilisateur configuré : lancez d'abord « nc config username <nom> ».");
