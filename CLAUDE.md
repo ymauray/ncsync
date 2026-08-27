@@ -33,7 +33,11 @@ Après une étape d'implémentation terminée, mettre à jour son statut dans `R
 - **Validation Systématique** : Le projet doit être recompilé (`dotnet build`) après chaque modification pour garantir l'absence de régressions de compilation.
 - **Exécution des Tests** : Les tests unitaires doivent être lancés (`dotnet test`) après chaque modification significative.
 
-## 5. Standards Techniques
+## 5. Confidentialité
+
+- **Ne jamais lire `.nc/config`** (dans ce dépôt ou dans tout dossier géré par `nc`) : ce fichier contient des informations sensibles. Ne pas l'ouvrir avec `Read`, `cat`, ou tout autre moyen, même à des fins de débogage ou de test — écrire un test qui vérifie son contenu sans jamais l'afficher ou le faire lire à l'IA (ex. assertions dans le code du test lui-même, pas d'inspection manuelle du fichier par l'agent).
+
+## 6. Standards Techniques
 
 - **C# / .NET 10** : Utilisation des fonctionnalités modernes du langage.
 - **Indentation** : Tabulations pour le C#, espaces pour le Markdown/YAML/JSON (configuré via `.editorconfig`).
