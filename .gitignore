@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Etat local nc (config/credentials/state), genere en testant le CLI depuis la racine du depot
+.nc/
