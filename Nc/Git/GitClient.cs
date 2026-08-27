@@ -33,5 +33,16 @@ internal sealed class GitClient(string workingDirectory)
 
     public ProcessResult ReadRef(string refName) => Run("rev-parse", "--verify", refName);
 
+    // `ls-tree` (pathspec) plutot que `cat-file -e <ref>:<path>` (syntaxe de revision) :
+    // cette derniere n'accepte pas les chemins a l'antislash (style Windows) meme quand le
+    // fichier existe reellement dans le ref, contrairement a `checkout`/`add`/`rm` qui les
+    // normalisent — bug constate en usage reel (voir ROADMAP.md, journal des decisions).
+    public bool PathExistsInRef(string refName, string path) =>
+        Run("ls-tree", "-r", "--name-only", refName, "--", path).StandardOutput.Trim().Length > 0;
+
+    public ProcessResult CheckoutFromRef(string refName, params string[] paths) => Run(["checkout", refName, "--", .. paths]);
+
+    public ProcessResult Unstage(string path) => Run("rm", "--cached", "--ignore-unmatch", "--", path);
+
     private ProcessResult Run(params string[] arguments) => ProcessRunner.Run("git", workingDirectory, arguments);
 }

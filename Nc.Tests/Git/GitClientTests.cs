@@ -117,4 +117,89 @@ public sealed class GitClientTests : IDisposable
 
     [Fact]
     public void ReadRef_UnknownRef_Fails() => Assert.False(_git.ReadRef("refs/nc/synced").Success);
+
+    [Fact]
+    public void PathExistsInRef_ForFileInRef_Succeeds()
+    {
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "contenu");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+
+        Assert.True(_git.PathExistsInRef("refs/nc/synced", "a.txt"));
+    }
+
+    [Fact]
+    public void PathExistsInRef_ForFileNotInRef_Fails()
+    {
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "contenu");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+
+        Assert.False(_git.PathExistsInRef("refs/nc/synced", "jamais-vu.txt"));
+    }
+
+    [Fact]
+    public void PathExistsInRef_ForFileInSubdirectoryGivenWithBackslash_Succeeds()
+    {
+        Directory.CreateDirectory(Path.Combine(_repoPath, "sous-dossier"));
+        File.WriteAllText(Path.Combine(_repoPath, "sous-dossier", "a.txt"), "contenu");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+
+        // Regression : `cat-file -e <ref>:<path>` (syntaxe de revision) rejette les chemins a
+        // l'antislash meme quand le fichier existe reellement, contrairement a `checkout`.
+        Assert.True(_git.PathExistsInRef("refs/nc/synced", "sous-dossier\\a.txt"));
+    }
+
+    [Fact]
+    public void CheckoutFromRef_RestoresContentAndIndexFromGivenRef()
+    {
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "original");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "modifie localement");
+        _git.AddAll();
+
+        var result = _git.CheckoutFromRef("refs/nc/synced", "a.txt");
+
+        Assert.True(result.Success);
+        Assert.Equal("original", File.ReadAllText(Path.Combine(_repoPath, "a.txt")));
+        Assert.Empty(_git.Status().StandardOutput);
+    }
+
+    [Fact]
+    public void CheckoutFromRef_ForPathNotInRef_FailsWithoutTouchingOtherPaths()
+    {
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "original");
+        _git.AddAll();
+        _git.Commit("sync initial");
+        _git.UpdateRef("refs/nc/synced", _git.ReadRef("HEAD").StandardOutput.Trim());
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "modifie localement");
+        _git.AddAll();
+
+        var result = _git.CheckoutFromRef("refs/nc/synced", "a.txt", "jamais-vu.txt");
+
+        Assert.False(result.Success);
+        Assert.Equal("modifie localement", File.ReadAllText(Path.Combine(_repoPath, "a.txt")));
+    }
+
+    [Fact]
+    public void Unstage_RemovesFileFromIndexWithoutTouchingWorkingTree()
+    {
+        File.WriteAllText(Path.Combine(_repoPath, "a.txt"), "contenu");
+        _git.AddAll();
+
+        var result = _git.Unstage("a.txt");
+
+        Assert.True(result.Success);
+        Assert.Contains("?? a.txt", _git.Status().StandardOutput);
+        Assert.True(File.Exists(Path.Combine(_repoPath, "a.txt")));
+    }
+
+    [Fact]
+    public void Unstage_ForNeverStagedFile_SucceedsAsNoOp() => Assert.True(_git.Unstage("jamais-ajoute.txt").Success);
 }

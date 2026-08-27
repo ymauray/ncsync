@@ -31,6 +31,8 @@ Commandes Git utilisées en interne :
 | `nc add <spec>` | `git add <spec>` |
 | `nc status` | `git status --porcelain` |
 | `nc diff` | `git diff --cached` (contenu détaillé des changements en staging non poussés) |
+| `nc reset <spec>` (fichier connu de `refs/nc/synced`) | `git checkout refs/nc/synced -- <spec>` (restaure contenu + index en un coup) |
+| `nc reset <spec>` (fichier jamais synchronisé) | `git rm --cached --ignore-unmatch -- <spec>` puis suppression du fichier local (pas de contenu distant vers lequel revenir) |
 | `nc push` (calcul du diff) | `git diff --cached --name-status -M` (détection incluse des renommages) |
 | `nc push` (scellement) | `git commit -m "sync <timestamp>"`, puis avancement d'un ref custom |
 | `nc pull` (état local avant écrasement) | `git status --porcelain` pour vérifier l'absence de modifications locales non poussées sur les fichiers concernés |
