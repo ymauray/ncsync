@@ -5,9 +5,9 @@ namespace Nc.Commands;
 
 internal static class ConfigCommandHandlers
 {
-    public static int SetUsername(string workingDirectory, string? username)
+    public static int SetUsername(string workingDirectory, string? username, string? globalConfigDirectory = null)
     {
-        var store = new NcConfigStore(workingDirectory);
+        var store = new IdentityConfigStore(workingDirectory, globalConfigDirectory);
 
         if (username is null)
         {

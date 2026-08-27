@@ -8,19 +8,32 @@ public sealed class ConfigCommandHandlersTests : IDisposable
 {
     private readonly string _workingDirectory = Directory.CreateTempSubdirectory("nc-config-cmd-tests-").FullName;
 
+    // Repertoire global isole, distinct du vrai ~/.config/ncsync : les tests ne doivent jamais
+    // lire ni ecrire dans la vraie configuration globale de la machine qui les execute.
+    private readonly string _globalConfigDirectory = Directory.CreateTempSubdirectory("nc-config-global-tests-").FullName;
+
     public void Dispose()
     {
         CredentialStoreFactory.Create().Delete(CredentialKey.ForPath(_workingDirectory));
         Directory.Delete(_workingDirectory, recursive: true);
+        Directory.Delete(_globalConfigDirectory, recursive: true);
     }
 
     [Fact]
-    public void SetUsername_WritesUsernameToConfig()
+    public void SetUsername_WritesUsernameToGlobalConfig()
     {
-        var exitCode = ConfigCommandHandlers.SetUsername(_workingDirectory, "myname");
+        var exitCode = SetUsername("myname");
 
         Assert.Equal(0, exitCode);
-        Assert.Equal("myname", new NcConfigStore(_workingDirectory).Load().Username);
+        Assert.Equal("myname", new IdentityConfigStore(_workingDirectory, _globalConfigDirectory).Load().Username);
+    }
+
+    [Fact]
+    public void SetUsername_DoesNotWriteToLocalNcConfig()
+    {
+        SetUsername("myname");
+
+        Assert.Null(new NcConfigStore(_workingDirectory).Load().Username);
     }
 
     [Fact]
@@ -44,7 +57,7 @@ public sealed class ConfigCommandHandlersTests : IDisposable
     [Fact]
     public void SetUsername_WithoutArgumentAndNothingStored_PrintsNothing()
     {
-        var output = CaptureConsoleOut(() => ConfigCommandHandlers.SetUsername(_workingDirectory, username: null));
+        var output = CaptureConsoleOut(() => SetUsername(null));
 
         Assert.Equal(string.Empty, output);
     }
@@ -52,9 +65,9 @@ public sealed class ConfigCommandHandlersTests : IDisposable
     [Fact]
     public void SetUsername_WithoutArgumentAndValueStored_PrintsStoredUsername()
     {
-        ConfigCommandHandlers.SetUsername(_workingDirectory, "myname");
+        SetUsername("myname");
 
-        var output = CaptureConsoleOut(() => ConfigCommandHandlers.SetUsername(_workingDirectory, username: null));
+        var output = CaptureConsoleOut(() => SetUsername(null));
 
         Assert.Equal("myname", output.Trim());
     }
@@ -62,11 +75,11 @@ public sealed class ConfigCommandHandlersTests : IDisposable
     [Fact]
     public void SetUsername_WithoutArgument_DoesNotOverwriteStoredValue()
     {
-        ConfigCommandHandlers.SetUsername(_workingDirectory, "myname");
+        SetUsername("myname");
 
-        ConfigCommandHandlers.SetUsername(_workingDirectory, username: null);
+        SetUsername(null);
 
-        Assert.Equal("myname", new NcConfigStore(_workingDirectory).Load().Username);
+        Assert.Equal("myname", new IdentityConfigStore(_workingDirectory, _globalConfigDirectory).Load().Username);
     }
 
     [Fact]
@@ -77,6 +90,9 @@ public sealed class ConfigCommandHandlersTests : IDisposable
         Assert.Equal(string.Empty, output);
         Assert.Null(CredentialStoreFactory.Create().TryLoad(CredentialKey.ForPath(_workingDirectory)));
     }
+
+    private int SetUsername(string? username) =>
+        ConfigCommandHandlers.SetUsername(_workingDirectory, username, _globalConfigDirectory);
 
     private static string CaptureConsoleOut(Action action)
     {
