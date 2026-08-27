@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Etat local nc (config/credentials/state), genere en testant le CLI depuis la racine du depot
 .nc/
+
+# Dossier de travail
+_workdir/

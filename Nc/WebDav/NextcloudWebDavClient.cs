@@ -25,6 +25,8 @@ internal sealed class NextcloudWebDavClient(HttpClient httpClient)
         </d:propfind>
         """;
 
+    public Uri BaseAddress => httpClient.BaseAddress!;
+
     public static NextcloudWebDavClient Create(string serverUrl, string username, string password)
     {
         var httpClient = new HttpClient { BaseAddress = BuildBaseUri(serverUrl, username) };

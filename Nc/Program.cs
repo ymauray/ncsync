@@ -5,7 +5,7 @@ namespace Nc;
 
 internal static class Program
 {
-    private static int Main(string[] args)
+    private static Task<int> Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -18,8 +18,8 @@ internal static class Program
         {
             usernameArgument
         };
-        configUsernameCommand.SetAction(parseResult =>
-            ConfigCommandHandlers.SetUsername(Environment.CurrentDirectory, parseResult.GetValue(usernameArgument)));
+        configUsernameCommand.SetAction((parseResult, _) =>
+            Task.FromResult(ConfigCommandHandlers.SetUsername(Environment.CurrentDirectory, parseResult.GetValue(usernameArgument))));
 
         var passwordArgument = new Argument<string?>("password")
         {
@@ -30,8 +30,8 @@ internal static class Program
         {
             passwordArgument
         };
-        configPasswordCommand.SetAction(parseResult =>
-            ConfigCommandHandlers.SetPassword(Environment.CurrentDirectory, parseResult.GetValue(passwordArgument)));
+        configPasswordCommand.SetAction((parseResult, _) =>
+            Task.FromResult(ConfigCommandHandlers.SetPassword(Environment.CurrentDirectory, parseResult.GetValue(passwordArgument))));
 
         var configCommand = new Command("config", "Configure les identifiants de connexion au serveur Nextcloud");
         configCommand.Subcommands.Add(configUsernameCommand);
@@ -51,7 +51,11 @@ internal static class Program
             remoteArgument,
             destinationArgument
         };
-        cloneCommand.SetAction(_ => NotImplemented("clone"));
+        cloneCommand.SetAction((parseResult, cancellationToken) => CloneCommandHandler.ExecuteAsync(
+            Environment.CurrentDirectory,
+            parseResult.GetValue(remoteArgument)!,
+            parseResult.GetValue(destinationArgument)!,
+            cancellationToken));
 
         var specArgument = new Argument<string[]>("spec")
         {
@@ -61,19 +65,19 @@ internal static class Program
         {
             specArgument
         };
-        addCommand.SetAction(_ => NotImplemented("add"));
+        addCommand.SetAction((_, _) => NotImplementedAsync("add"));
 
         var pushCommand = new Command("push", "Envoie vers le serveur d'origine les modifications marquées par 'nc add'");
-        pushCommand.SetAction(_ => NotImplemented("push"));
+        pushCommand.SetAction((_, _) => NotImplementedAsync("push"));
 
         var pullCommand = new Command("pull", "Récupère depuis le serveur d'origine les modifications distantes");
-        pullCommand.SetAction(_ => NotImplemented("pull"));
+        pullCommand.SetAction((_, _) => NotImplementedAsync("pull"));
 
         var diffCommand = new Command("diff", "Affiche le détail des changements locaux non encore poussés");
-        diffCommand.SetAction(_ => NotImplemented("diff"));
+        diffCommand.SetAction((_, _) => NotImplementedAsync("diff"));
 
         var statusCommand = new Command("status", "Affiche l'état local (fichiers modifiés/ajoutés/supprimés non poussés)");
-        statusCommand.SetAction(_ => NotImplemented("status"));
+        statusCommand.SetAction((_, _) => NotImplementedAsync("status"));
 
         var rootCommand = new RootCommand("nc — client de synchronisation Nextcloud, workflow inspiré de Git")
         {
@@ -86,12 +90,12 @@ internal static class Program
             statusCommand
         };
 
-        return rootCommand.Parse(args).Invoke();
+        return rootCommand.Parse(args).InvokeAsync();
     }
 
-    private static int NotImplemented(string command)
+    private static Task<int> NotImplementedAsync(string command)
     {
         Console.Error.WriteLine($"nc {command} : pas encore implémenté (voir ROADMAP.md).");
-        return 1;
+        return Task.FromResult(1);
     }
 }
