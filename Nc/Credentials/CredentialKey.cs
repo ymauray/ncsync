@@ -10,6 +10,9 @@ namespace Nc.Credentials;
 /// </summary>
 internal static class CredentialKey
 {
+    /// <summary>Cle de l'identite globale (mot de passe par defaut, reutilisable depuis n'importe quel dossier).</summary>
+    public const string Global = "global";
+
     public static string ForPath(string path)
     {
         var fullPath = Path.GetFullPath(path);

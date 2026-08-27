@@ -12,7 +12,8 @@ internal static class CloneCommandHandler
         string remoteSpec,
         string destination,
         CancellationToken cancellationToken = default,
-        string? globalConfigDirectory = null)
+        string? globalConfigDirectory = null,
+        string? globalCredentialKey = null)
     {
         RemoteSpec remote;
         try
@@ -44,7 +45,7 @@ internal static class CloneCommandHandler
         }
 
         var credentialStore = CredentialStoreFactory.Create();
-        var password = credentialStore.TryLoad(CredentialKey.ForPath(currentDirectory));
+        var password = new IdentityCredentialStore(credentialStore, currentDirectory, globalCredentialKey).TryLoad();
         if (password is null)
         {
             Console.Error.WriteLine("Aucun mot de passe configuré : lancez d'abord « nc config password <mot de passe> ».");

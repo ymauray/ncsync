@@ -8,13 +8,16 @@ public sealed class ConfigCommandHandlersTests : IDisposable
 {
     private readonly string _workingDirectory = Directory.CreateTempSubdirectory("nc-config-cmd-tests-").FullName;
 
-    // Repertoire global isole, distinct du vrai ~/.config/ncsync : les tests ne doivent jamais
-    // lire ni ecrire dans la vraie configuration globale de la machine qui les execute.
+    // Repertoire/cle globaux isoles, distincts des vrais ~/.config/ncsync et de la cle
+    // globale reelle : les tests ne doivent jamais lire ni ecrire la vraie configuration
+    // globale de la machine qui les execute.
     private readonly string _globalConfigDirectory = Directory.CreateTempSubdirectory("nc-config-global-tests-").FullName;
+    private readonly string _globalCredentialKey = $"nc-tests-global-{Guid.NewGuid():N}";
 
     public void Dispose()
     {
         CredentialStoreFactory.Create().Delete(CredentialKey.ForPath(_workingDirectory));
+        CredentialStoreFactory.Create().Delete(_globalCredentialKey);
         Directory.Delete(_workingDirectory, recursive: true);
         Directory.Delete(_globalConfigDirectory, recursive: true);
     }
@@ -37,19 +40,19 @@ public sealed class ConfigCommandHandlersTests : IDisposable
     }
 
     [Fact]
-    public void SetPassword_StoresPasswordInCredentialStore()
+    public void SetPassword_StoresPasswordUnderGlobalKey()
     {
-        var exitCode = ConfigCommandHandlers.SetPassword(_workingDirectory, "s3cret");
+        var exitCode = SetPassword("s3cret");
 
         Assert.Equal(0, exitCode);
-        var stored = CredentialStoreFactory.Create().TryLoad(CredentialKey.ForPath(_workingDirectory));
+        var stored = CredentialStoreFactory.Create().TryLoad(_globalCredentialKey);
         Assert.Equal("s3cret", stored);
     }
 
     [Fact]
     public void SetPassword_DoesNotWriteToNcConfig()
     {
-        ConfigCommandHandlers.SetPassword(_workingDirectory, "s3cret");
+        SetPassword("s3cret");
 
         Assert.Null(new NcConfigStore(_workingDirectory).Load().Username);
     }
@@ -85,14 +88,17 @@ public sealed class ConfigCommandHandlersTests : IDisposable
     [Fact]
     public void SetPassword_WithoutArgument_PrintsNothingAndStoresNothing()
     {
-        var output = CaptureConsoleOut(() => ConfigCommandHandlers.SetPassword(_workingDirectory, password: null));
+        var output = CaptureConsoleOut(() => SetPassword(null));
 
         Assert.Equal(string.Empty, output);
-        Assert.Null(CredentialStoreFactory.Create().TryLoad(CredentialKey.ForPath(_workingDirectory)));
+        Assert.Null(CredentialStoreFactory.Create().TryLoad(_globalCredentialKey));
     }
 
     private int SetUsername(string? username) =>
         ConfigCommandHandlers.SetUsername(_workingDirectory, username, _globalConfigDirectory);
+
+    private int SetPassword(string? password) =>
+        ConfigCommandHandlers.SetPassword(_workingDirectory, password, _globalCredentialKey);
 
     private static string CaptureConsoleOut(Action action)
     {
