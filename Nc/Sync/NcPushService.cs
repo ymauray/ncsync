@@ -40,7 +40,7 @@ internal static class NcPushService
         CancellationToken cancellationToken = default)
     {
         var diffResult = git.DiffCachedNameStatus();
-        EnsureGitSuccess(diffResult, "git diff --cached --name-status -M");
+        diffResult.EnsureSuccess("git diff --cached --name-status -M");
 
         var entries = GitDiffNameStatusParser.Parse(diffResult.StandardOutput);
         if (entries.Count == 0)
@@ -72,9 +72,9 @@ internal static class NcPushService
         }
 
         var commitResult = git.Commit($"sync {DateTimeOffset.UtcNow:O}");
-        EnsureGitSuccess(commitResult, "git commit");
+        commitResult.EnsureSuccess("git commit");
         var commitSha = git.ReadRef("HEAD").StandardOutput.Trim();
-        EnsureGitSuccess(git.UpdateRef(SyncedRef, commitSha), "git update-ref");
+        git.UpdateRef(SyncedRef, commitSha).EnsureSuccess("git update-ref");
 
         stateStore.Save(state with { ETagsByPath = eTagsByPath });
 
@@ -219,11 +219,4 @@ internal static class NcPushService
         }
     }
 
-    private static void EnsureGitSuccess(ProcessResult result, string step)
-    {
-        if (!result.Success)
-        {
-            throw new InvalidOperationException($"Échec de « {step} » : {result.StandardError}");
-        }
-    }
 }

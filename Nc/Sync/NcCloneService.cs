@@ -52,11 +52,11 @@ internal static class NcCloneService
         await File.WriteAllTextAsync(Path.Combine(destinationDirectory, ".gitignore"), ".nc/" + Environment.NewLine, cancellationToken);
 
         var git = new GitClient(destinationDirectory);
-        EnsureSuccess(git.Init(), "git init");
-        EnsureSuccess(git.AddAll(), "git add -A");
-        EnsureSuccess(git.Commit("sync initial"), "git commit");
+        git.Init().EnsureSuccess("git init");
+        git.AddAll().EnsureSuccess("git add -A");
+        git.Commit("sync initial").EnsureSuccess("git commit");
         var commitSha = git.ReadRef("HEAD").StandardOutput.Trim();
-        EnsureSuccess(git.UpdateRef("refs/nc/synced", commitSha), "git update-ref");
+        git.UpdateRef("refs/nc/synced", commitSha).EnsureSuccess("git update-ref");
 
         new SyncStateStore(destinationDirectory).Save(new SyncState { ETagsByPath = eTagsByPath });
     }
@@ -81,14 +81,6 @@ internal static class NcCloneService
         if (hasForeignContent)
         {
             throw new InvalidOperationException($"« {destinationDirectory} » existe déjà et n'est pas un dossier vide.");
-        }
-    }
-
-    private static void EnsureSuccess(ProcessResult result, string step)
-    {
-        if (!result.Success)
-        {
-            throw new InvalidOperationException($"Échec de « {step} » : {result.StandardError}");
         }
     }
 }
