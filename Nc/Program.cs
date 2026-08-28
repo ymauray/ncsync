@@ -80,7 +80,7 @@ internal static class Program
             Task.FromResult(ResetCommandHandler.Execute(Environment.CurrentDirectory, parseResult.GetValue(resetSpecArgument)!)));
 
         var pushCommand = new Command("push", "Envoie vers le serveur d'origine les modifications marquées par 'nc add'");
-        pushCommand.SetAction((_, _) => NotImplementedAsync("push"));
+        pushCommand.SetAction((_, cancellationToken) => PushCommandHandler.ExecuteAsync(Environment.CurrentDirectory, cancellationToken));
 
         var pullCommand = new Command("pull", "Récupère depuis le serveur d'origine les modifications distantes");
         pullCommand.SetAction((_, _) => NotImplementedAsync("pull"));
