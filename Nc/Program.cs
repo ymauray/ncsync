@@ -83,7 +83,7 @@ internal static class Program
         pushCommand.SetAction((_, cancellationToken) => PushCommandHandler.ExecuteAsync(Environment.CurrentDirectory, cancellationToken));
 
         var pullCommand = new Command("pull", "Récupère depuis le serveur d'origine les modifications distantes");
-        pullCommand.SetAction((_, _) => NotImplementedAsync("pull"));
+        pullCommand.SetAction((_, cancellationToken) => PullCommandHandler.ExecuteAsync(Environment.CurrentDirectory, cancellationToken));
 
         var diffCommand = new Command("diff", "Affiche le détail des changements locaux non encore poussés");
         diffCommand.SetAction((_, _) =>
@@ -106,11 +106,5 @@ internal static class Program
         };
 
         return rootCommand.Parse(args).InvokeAsync();
-    }
-
-    private static Task<int> NotImplementedAsync(string command)
-    {
-        Console.Error.WriteLine($"nc {command} : pas encore implémenté (voir ROADMAP.md).");
-        return Task.FromResult(1);
     }
 }

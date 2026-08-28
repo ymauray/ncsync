@@ -50,11 +50,11 @@ Accès via `HttpClient` avec des méthodes WebDAV personnalisées (pas de librai
 
 | Verbe | Usage |
 |---|---|
-| `PROPFIND` (profondeur 1 ou infinity) | Listing d'un dossier distant + métadonnées (dont l'en-tête `oc:etag`), utilisé au `clone` et pour la détection de conflit avant `push` |
-| `GET` | Téléchargement d'un fichier (au `clone`) |
-| `PUT` | Upload d'un fichier ajouté/modifié |
-| `DELETE` | Suppression d'un fichier côté serveur |
-| `MOVE` | Renommage/déplacement d'un fichier côté serveur |
+| `PROPFIND` (profondeur 1 ou infinity) | Listing d'un dossier distant + métadonnées (dont l'en-tête `oc:etag`), utilisé au `clone`, pour lister l'arbre distant complet à chaque `pull`, et pour la détection de conflit (ciblé, `Depth: 0`) avant `push`/`pull` |
+| `GET` | Téléchargement d'un fichier (au `clone` et à chaque `pull` pour les fichiers nouveaux/changés) |
+| `PUT` | Upload d'un fichier ajouté/modifié (`push`) |
+| `DELETE` | Suppression d'un fichier côté serveur (`push`) |
+| `MOVE` | Renommage/déplacement d'un fichier côté serveur (`push`, mapping des renommages Git détectés par `-M`) |
 | `MKCOL` | Création d'un dossier distant si nécessaire |
 
 Endpoint de base : `https://<serveur>/remote.php/dav/files/<username>/<chemin>`.
@@ -99,14 +99,14 @@ Fichiers hors du dépôt Git dans les deux cas (`.nc/` exclu via `.gitignore` g�
 ## 6. Architecture logicielle (.NET 10)
 
 - **CLI** (`Nc/Program.cs`) : `System.CommandLine`, actions asynchrones uniformément (`SetAction((parseResult, cancellationToken) => Task<int>)`, `Main` retourne `Task<int>` via `InvokeAsync()`). Sous-commandes : `config` (`username`, `password`), `clone`, `add`, `reset`, `push`, `pull`, `diff`, `status`.
-- **`Nc.Processes`** : `ProcessRunner`/`ProcessResult` — invocation générique d'un exécutable externe (git, security, secret-tool) avec capture stdout/stderr et distinction « exécutable introuvable » vs « commande en échec ». Base commune réutilisée par `Nc.Git` et `Nc.Credentials`.
-- **`Nc.Git`** : `GitClient` — wrapper `Process` autour de `git` (`Init`, `AddAll`, `Add`, `Status`, `DiffCachedNameStatus`, `DiffCached`, `Commit`, `UpdateRef`, `ReadRef`, `PathExistsInRef`, `CheckoutFromRef`, `Unstage`, `GetVersion`).
-- **`Nc.WebDav`** : `NextcloudWebDavClient` (`HttpClient` injectable pour les tests, factory `Create` pour l'usage réel), `WebDavPropFindParser` (parsing pur du XML `multistatus`), `WebDavHrefResolver` (résout un `href` absolu en chemin relatif au dossier demandé), `WebDavEntry`, `WebDavDepth`.
-- **`Nc.Sync`** : `NcCloneService` (algorithme de `nc clone`, pur — prend un `NextcloudWebDavClient` déjà construit), `SyncState`/`SyncStateStore` (`.nc/state.json`, ETags par chemin).
+- **`Nc.Processes`** : `ProcessRunner`/`ProcessResult` — invocation générique d'un exécutable externe (git, security, secret-tool) avec capture stdout/stderr et distinction « exécutable introuvable » vs « commande en échec ». Base commune réutilisée par `Nc.Git` et `Nc.Credentials`. `ProcessResultExtensions.EnsureSuccess` — lève une `InvalidOperationException` avec le message d'erreur si `ProcessResult.Success` est faux, factorisé entre `NcCloneService`/`NcPushService`/`NcPullService`.
+- **`Nc.Git`** : `GitClient` — wrapper `Process` autour de `git` (`Init`, `AddAll`, `Add`, `Status`, `DiffCachedNameStatus`, `DiffCached`, `Commit`, `UpdateRef`, `ReadRef`, `PathExistsInRef`, `CheckoutFromRef`, `Unstage`, `GetVersion`). `GitDiffNameStatusParser` (+ `GitChangeType`, `GitDiffEntry`) — parsing pur de la sortie de `DiffCachedNameStatus` (`-M`) en entrées Added/Modified/Deleted/Renamed, utilisé par `nc push`.
+- **`Nc.WebDav`** : `NextcloudWebDavClient` (`HttpClient` injectable pour les tests, factory `Create` pour l'usage réel), `WebDavPropFindParser` (parsing pur du XML `multistatus`), `WebDavHrefResolver` (résout un `href` absolu en chemin relatif au dossier demandé), `WebDavPathBuilder` (combine `RemotePath` + chemin relatif Git en chemin de requête WebDAV percent-encodé segment par segment, utilisé par `nc push`/`nc pull`), `WebDavEntry`, `WebDavDepth`.
+- **`Nc.Sync`** : `NcCloneService` (algorithme de `nc clone`, pur), `NcPushService` (algorithme de `nc push` : diff staged → détection de conflit par ETag → PUT/DELETE/MOVE → commit + avancement de `refs/nc/synced`/`.nc/state.json`, voir §4), `NcPushConflictException` (levée par `NcPushService` en cas de conflit, expose `ConflictingPaths`), `NcPullService` (algorithme de `nc pull` : PROPFIND récursif complet comparé à `.nc/state.json` → téléchargement/suppression locale → commit + avancement), `SyncState`/`SyncStateStore` (`.nc/state.json`, ETags par chemin). Chaque service de synchronisation est pur — prend un `NextcloudWebDavClient` déjà construit, ne s'occupe pas des identifiants (voir `Nc.Commands`).
 - **`Nc.Storage`** : `JsonFileStore` — (dé)sérialisation JSON générique (`Load<T>`/`Save<T>`), réutilisée par `NcConfigStore` et `SyncStateStore`.
 - **`Nc.Configuration`** : `NcConfig` (schéma : `Username`, `ServerUrl`, `RemotePath`), `NcConfigStore` (`.nc/config`, local par dossier), `IdentityConfigStore` (identité globale `~/.config/ncsync/config` avec repli local, voir §5), `GlobalConfigLocation`.
 - **`Nc.Credentials`** : `ICredentialStore`, `DpapiCredentialStore`, `KeychainCredentialStore`, `SecretToolCredentialStore`, `EncryptedFileCredentialStore`, `CredentialStoreFactory` (sélection par plateforme), `CredentialKey` (dérivation de clé par dossier + clé globale fixe), `IdentityCredentialStore` (symétrique à `IdentityConfigStore` pour le mot de passe, voir §5).
-- **`Nc.Commands`** : un handler testable par commande (ou groupe de commandes passe-plat), câblé depuis `Program.cs` : `ConfigCommandHandlers`, `CloneCommandHandler` (+ `RemoteSpec`), `ResetCommandHandler`, `GitPassthroughCommandHandlers` (`add`/`status`/`diff`).
+- **`Nc.Commands`** : un handler testable par commande (ou groupe de commandes passe-plat), câblé depuis `Program.cs` : `ConfigCommandHandlers`, `CloneCommandHandler` (+ `RemoteSpec`), `ResetCommandHandler`, `GitPassthroughCommandHandlers` (`add`/`status`/`diff`), `PushCommandHandler`, `PullCommandHandler`. Ces deux derniers partagent le même schéma : charger `.nc/config` (local) + mot de passe (`CredentialKey.ForPath(dossier)`), vérifier `refs/nc/synced`, construire un `NextcloudWebDavClient`, puis déléguer à `NcPushService`/`NcPullService` (pas d'identité globale ici, contrairement à `nc clone` — voir ROADMAP.md, journal des décisions).
 
 ## 7. Gestion des erreurs
 
@@ -117,7 +117,7 @@ Fichiers hors du dépôt Git dans les deux cas (`.nc/` exclu via `.gitignore` g�
 
 1. Chunked upload Nextcloud (gros fichiers, reprise).
 2. Fiabilité de la détection de conflit par ETag (cas limites : dossier renommé côté serveur, fichier supprimé côté serveur pendant qu'il est modifié en local).
-3. Détection de renommage côté Git (`-M` sur `git diff`) correctement mappée vers un `MOVE` WebDAV plutôt qu'un DELETE+PUT.
+3. ~~Détection de renommage côté Git (`-M` sur `git diff`) correctement mappée vers un `MOVE` WebDAV plutôt qu'un DELETE+PUT~~ — traité en Phase 12 (`NcPushService.MoveFileAsync`, voir §6 et ROADMAP.md).
 4. Présence de `git` dans le `PATH` sur les trois OS cibles — vérification et message d'erreur au démarrage.
 5. ~~Stockage des identifiants sur macOS/Linux : dépendance à des outils externes (`security`, `secret-tool`) potentiellement absents~~ — traité en Phase 2 (`EncryptedFileCredentialStore`, repli Linux uniquement, voir §5 et ROADMAP.md).
 6. `nc pull` partiel : gérer proprement le cas où certains fichiers sont appliqués et d'autres bloqués par conflit dans le même appel, sans laisser l'état local (`refs/nc/synced`, `.nc/state.json`) incohérent.
